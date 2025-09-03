@@ -1,0 +1,13 @@
+commit 79420dbcb106ff07b0d1823f17f31ba8c45cc641
+Author: Production Server <admin@caiwu.local>
+Date:   Thu Aug 28 14:09:03 2025 +0800
+
+    关键修复：报销记录创建和更新时包含发票扩展字段
+    
+    - 修复createFormAutoGenerate函数的INSERT语句，包含invoice_date, buyer_name, service_name字段
+    - 修复updateForm函数的INSERT和UPDATE语句，包含发票扩展字段
+    - 添加详细的调试日志，便于跟踪数据流
+    - 这是导致基于被驳回报销单重新创建时发票字段丢失的根本原因
+
+backend/src/db.sqlite
+backend/src/services/formService.js

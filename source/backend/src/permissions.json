@@ -1,0 +1,54 @@
+{
+  "admin": [
+    "forms.read.all",
+    "forms.update.all",
+    "forms.delete.any",
+    "forms.approve.finance",
+    "forms.approve.manager",
+    "forms.export.pdf",
+    "forms.pay.finance",
+    "forms.loans.link",
+    "forms.types.manage",
+    "loans.read.all",
+    "loans.update.all",
+    "loans.approve.finance",
+    "loans.approve.manager",
+    "loans.pay.finance",
+    "loans.delete.any",
+    "loans.repay.any",
+    "users.read.all",
+    "users.manage",
+    "system.stats.read",
+    "system.backup",
+    "system.restore",
+    "audit.read.all"
+  ],
+  "finance": [
+    "forms.read.department",
+    "forms.approve.finance",
+    "forms.export.pdf",
+    "forms.pay.finance",
+    "forms.loans.link",
+    "loans.read.all",
+    "loans.update.all",
+    "loans.approve.finance",
+    "loans.pay.finance",
+    "loans.repay.any",
+    "system.stats.read"
+  ],
+  "manager": [
+    "forms.read.department",
+    "forms.approve.manager",
+    "forms.export.pdf",
+    "loans.read.all",
+    "loans.update.all",
+    "loans.approve.manager",
+    "system.stats.read"
+  ],
+  "employee": [
+    "forms.read.own",
+    "forms.create",
+    "forms.update.own",
+    "forms.export.pdf"
+  ]
+}

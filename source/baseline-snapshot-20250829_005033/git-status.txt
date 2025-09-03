@@ -1,0 +1,4 @@
+ M backend/src/db.sqlite
+?? FINAL_VERSION_REPORT.md
+?? baseline-snapshot-20250829_005033/
+?? scripts/regression-protection-system.sh

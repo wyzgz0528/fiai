@@ -1,0 +1,13 @@
+commit c90a19193f7a59593374f8c4d36b1eab86521958
+Author: Production Server <admin@caiwu.local>
+Date:   Thu Aug 28 18:29:28 2025 +0800
+
+    关键修复：撤回报销申请时保留发票字段
+    
+    - 修复withdrawForm函数，撤回时只重置审批相关字段
+    - 保留所有5个发票基本字段：发票号、发票金额、发票日期、购买方、服务名称
+    - 添加调试日志追踪撤回过程
+    - 解决撤回后再保存草稿时发票字段丢失的问题
+
+backend/src/db.sqlite
+backend/src/services/formService.js

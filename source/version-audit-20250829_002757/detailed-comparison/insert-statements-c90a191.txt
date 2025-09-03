@@ -1,0 +1,23 @@
+  const status = statusFlag === '提交申请' ? '待财务审核' : '草稿';
+  const run = db.transaction(()=>{
+  const info = db.prepare(`INSERT INTO reimbursement_forms (user_id, form_number, total_amount, status, created_at) VALUES (?,?,?,?,datetime('now', 'localtime'))`)
+      .run(user.userId, formNumber, totalAmount, status);
+    const formId = info.lastInsertRowid;
+  const stmt = db.prepare("INSERT INTO reimbursements (user_id, amount, purpose, type, remark, invoice_number, invoice_amount, invoice_date, buyer_name, service_name, status, created_at, form_status, form_id) VALUES (?,?,?,?,?,?,?,?,?,?,'已归集到报销单',datetime('now', 'localtime'),'已绑定',?)");
+  const voucherStmt = db.prepare('INSERT INTO vouchers (reimbursement_form_id, original_name, file_name, file_path, file_size, file_type, uploaded_by, created_at) VALUES (?,?,?,?,?,?,?,datetime(\'now\', \'localtime\'))');
+    const recordVoucherStmt = db.prepare('INSERT OR IGNORE INTO reimbursement_record_vouchers (record_id, voucher_id, created_by) VALUES (?,?,?)');
+    const recIds=[];
+    for(const item of processedItems){
+      if(!item.amount || !item.purpose) continue;
+--
+  }
+
+  const tx = db.transaction(()=>{
+    const existing = db.prepare('SELECT id FROM reimbursements WHERE form_id=?').all(formId).map(r=>r.id);
+    const keep=new Set();
+  const insertStmt = db.prepare("INSERT INTO reimbursements (user_id, amount, purpose, type, remark, invoice_number, invoice_amount, invoice_date, buyer_name, service_name, status, created_at, form_status, form_id) VALUES (?,?,?,?,?,?,?,?,?,?,'已归集到报销单',CURRENT_TIMESTAMP,'已绑定',?)");
+    const updateStmt = db.prepare('UPDATE reimbursements SET amount=?, purpose=?, type=?, remark=?, invoice_number=?, invoice_amount=?, invoice_date=?, buyer_name=?, service_name=? WHERE id=? AND form_id=?');
+  const voucherStmt = db.prepare('INSERT INTO vouchers (reimbursement_form_id, original_name, file_name, file_path, file_size, file_type, uploaded_by, created_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)');
+    const recordVoucherStmt = db.prepare('INSERT OR IGNORE INTO reimbursement_record_vouchers (record_id, voucher_id, created_by) VALUES (?,?,?)');
+    for(const it of processedItems){
+      const amount = Number(it.amount);

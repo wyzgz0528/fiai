@@ -1,0 +1,55 @@
+/* 微软 Azure.com 风格字体与基础样式 */
+:root {
+  --azure-font-family: 'Segoe UI', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  --azure-font-size: 16px;
+  --azure-bg: #f7fafd;
+  --azure-primary: #0078d4;
+  --azure-primary-hover: #005a9e;
+  --azure-border-radius: 6px;
+  --azure-box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+body {
+  font-family: var(--azure-font-family);
+  font-size: var(--azure-font-size);
+  background: var(--azure-bg);
+  color: #222;
+}
+input, textarea, select {
+  font-family: var(--azure-font-family);
+  font-size: 15px;
+  border-radius: var(--azure-border-radius);
+  border: 1px solid #d6d6d6;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--azure-primary);
+}
+button {
+  font-family: var(--azure-font-family);
+  font-size: 16px;
+  border-radius: var(--azure-border-radius);
+  background: var(--azure-primary);
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  box-shadow: var(--azure-box-shadow);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover {
+  background: var(--azure-primary-hover);
+}
+.card, .ant-card, .ant-modal-content {
+  border-radius: var(--azure-border-radius) !important;
+  box-shadow: var(--azure-box-shadow) !important;
+}
+.ant-btn-primary {
+  background: var(--azure-primary) !important;
+  border-color: var(--azure-primary) !important;
+}
+.ant-btn-primary:hover {
+  background: var(--azure-primary-hover) !important;
+  border-color: var(--azure-primary-hover) !important;
+}

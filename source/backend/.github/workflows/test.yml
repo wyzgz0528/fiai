@@ -1,0 +1,51 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./backend
+      run: npm ci
+    
+    - name: Run unit tests
+      working-directory: ./backend
+      run: npm test
+    
+    - name: Start backend server for integration tests
+      working-directory: ./backend
+      run: |
+        npm start &
+        sleep 10  # 等待服务器启动
+    
+    - name: Run integration tests
+      working-directory: ./backend
+      run: node tests/integration/resubmit.integration.test.js
+    
+    - name: Stop backend server
+      working-directory: ./backend
+      run: pkill -f "node src/server.js" || true

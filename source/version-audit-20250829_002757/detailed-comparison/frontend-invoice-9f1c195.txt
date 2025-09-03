@@ -1,0 +1,287 @@
+  { value: '其他', label: '其他' },
+];
+
+function ReimbursementForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [form] = Form.useForm();
+  
+  // 明细数据状态
+  const [items, setItems] = useState([
+    { key: Date.now(), amount: '', purpose: '', type: '', remark: '', uploaded: [], invoice_number: '' }
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [dynamicTypes, setDynamicTypes] = useState(fallbackTypeOptions);
+  const [formStatus, setFormStatus] = useState(''); // 新增：当前报销单状态
+  const [ocrLoading, setOcrLoading] = useState({}); // OCR识别加载状态
+
+  // 预览相关状态
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
+--
+            return {
+              key: `exist-${r.id}`,
+              id: r.id,
+              amount: r.amount,
+              purpose: r.purpose,
+              type: r.type,
+              remark: r.remark,
+              uploaded: [], // 新增附件列表（仅新增的临时附件）
+              existingVouchers: recordVouchers, // 该记录关联的凭证列表
+              existingVoucherCount: recordVouchers.length,
+              invoice_number: r.invoice_number || '', // 发票号
+              invoice_date: r.invoice_date || '', // 发票日期
+              buyer_name: r.buyer_name || '', // 购买方
+              service_name: r.service_name || '' // 服务名称
+            };
+          }));
+            if (mapped.length) setItems(mapped);
+        } catch (e) {
+          message.error(e?.response?.data?.msg || '加载报销单失败');
+        }
+      })();
+    }
+--
+
+  // 添加明细行
+  const handleAddItem = () => {
+    const newItem = {
+      key: Date.now(),
+      amount: '',
+      purpose: '',
+      type: '',
+      remark: '',
+      uploaded: [],
+      invoice_number: '',
+      invoice_date: '',
+      buyer_name: '',
+      service_name: ''
+    };
+    setItems(prev => [...prev, newItem]);
+  };
+
+  // 删除明细行
+  const handleRemoveItem = (key) => {
+    if (items.length === 1) {
+      message.warning('至少保留一条明细记录');
+--
+    return alphanumeric.slice(-8);
+  };
+
+  // 发票号变更处理
+  const handleInvoiceNumberChange = async (key, value) => {
+    // 处理发票号，只保留后8位数字
+    const processedValue = processInvoiceNumber(value);
+
+    // 更新发票号
+    setItems(prev => prev.map(item =>
+      item.key === key ? { ...item, invoice_number: processedValue } : item
+    ));
+
+    // 如果发票号不为空，进行实时查重验证
+    if (processedValue && processedValue.trim()) {
+      try {
+        const response = await api.get(`/api/reimbursement/check-duplicate?invoice_number=${encodeURIComponent(processedValue.trim())}`);
+        if (response.data.isDuplicate) {
+          message.warning(`发票号 "${processedValue}" 已存在，请检查是否重复录入`);
+        }
+      } catch (error) {
+        console.error('发票号查重失败:', error);
+        // 不阻断用户输入，仅在控制台记录错误
+      }
+    }
+  };
+
+--
+        console.log('多字段OCR识别响应:', result);
+
+        // 获取OCR数据（可能在result.data中）
+        const ocrData = result.data || result;
+
+        // 数据清理函数
+        const cleanOCRValue = (value, type = 'text') => {
+          if (!value) return value;
+          let cleaned = String(value).trim();
+
+          if (type === 'invoice_number') {
+            // 清理发票号：移除开头的冒号、空格等特殊字符
+            cleaned = cleaned.replace(/^[:：\s]+/, '');
+            // 移除结尾的特殊字符
+            cleaned = cleaned.replace(/[:：\s]+$/, '');
+          } else if (type === 'amount') {
+            // 清理金额：移除非数字字符（保留小数点）
+            cleaned = cleaned.replace(/[^\d.]/g, '');
+            // 转换为数字
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? value : num;
+          } else if (type === 'date') {
+            // 清理日期：标准化格式
+            cleaned = cleaned.replace(/[年月]/g, '-').replace(/[日]/g, '');
+          }
+
+          return cleaned;
+        };
+
+        if (ocrData.invoice_number || ocrData.amount || ocrData.invoice_date) {
+          // 更新表单字段
+          const updates = {};
+
+          // 发票号（清理多余字符）
+          if (ocrData.invoice_number?.value) {
+            const cleanedInvoiceNumber = cleanOCRValue(ocrData.invoice_number.value, 'invoice_number');
+            updates.invoice_number = cleanedInvoiceNumber;
+            await handleInvoiceNumberChange(itemKey, cleanedInvoiceNumber);
+          }
+
+          // 金额（清理并转换为数字）
+          if (ocrData.amount?.value) {
+            const cleanedAmount = cleanOCRValue(ocrData.amount.value, 'amount');
+            updates.amount = cleanedAmount;
+          }
+
+          // 用途字段保持手动填写，不自动填充
+
+          // 发票日期（清理格式）
+          if (ocrData.invoice_date?.value) {
+            const cleanedDate = cleanOCRValue(ocrData.invoice_date.value, 'date');
+            updates.invoice_date = cleanedDate;
+          }
+
+          // 购买方名称
+          if (ocrData.buyer_name?.value) {
+            const cleanedBuyerName = cleanOCRValue(ocrData.buyer_name.value);
+            updates.buyer_name = cleanedBuyerName;
+          }
+
+          // 服务名称
+          if (ocrData.service_name?.value) {
+--
+                               (!isEdit && Object.keys(updates).length > 0); // 新建模式但有识别结果
+
+          if (shouldSaveOCR && Object.keys(updates).length > 0) {
+            // 如果是编辑模式且有ID，立即保存
+            if (isEdit && item.id) {
+              try {
+                console.log('立即保存OCR结果到数据库，报销记录ID:', item.id);
+                await api.post('/api/ocr/save-invoice-info', {
+                  reimbursementId: item.id,
+                  ocrResult: {
+                    invoice_number: ocrData.invoice_number,
+                    amount: ocrData.amount,
+                    invoice_date: ocrData.invoice_date,
+                    buyer_name: ocrData.buyer_name,
+                    service_name: ocrData.service_name,
+                    overall_confidence: ocrData.overall_confidence || 0.8
+                  },
+                  mode: 'auto_recognition'
+                });
+                console.log('OCR结果已立即保存到数据库');
+              } catch (saveError) {
+                console.error('立即保存OCR结果失败:', saveError);
+              }
+            } else {
+              // 新建模式：存储OCR结果，等待报销单保存后再保存到数据库
+              console.log('新建模式：存储OCR结果待后续保存', {
+                itemKey: itemKey,
+                ocrData: {
+                  invoice_number: ocrData.invoice_number?.value,
+                  amount: ocrData.amount?.value,
+                  invoice_date: ocrData.invoice_date?.value,
+                  buyer_name: ocrData.buyer_name?.value,
+                  service_name: ocrData.service_name?.value
+                }
+              });
+
+              // 将OCR结果存储到item中，等待报销单保存后处理
+              setItems(prev => prev.map(prevItem =>
+                prevItem.key === itemKey
+                  ? {
+                      ...prevItem,
+                      pendingOcrResult: {
+                        invoice_number: ocrData.invoice_number,
+                        amount: ocrData.amount,
+                        invoice_date: ocrData.invoice_date,
+                        buyer_name: ocrData.buyer_name,
+                        service_name: ocrData.service_name,
+                        overall_confidence: ocrData.overall_confidence || 0.8
+                      }
+                    }
+                  : prevItem
+              ));
+            }
+          }
+
+          // 显示识别结果
+          const recognizedFields = [];
+          if (ocrData.invoice_number?.value) recognizedFields.push(`发票号: ${ocrData.invoice_number.value}`);
+          if (ocrData.amount?.value) recognizedFields.push(`金额: ¥${ocrData.amount.value}`);
+          if (ocrData.invoice_date?.value) recognizedFields.push(`日期: ${ocrData.invoice_date.value}`);
+          if (ocrData.buyer_name?.value) recognizedFields.push(`购买方: ${ocrData.buyer_name.value}`);
+          if (ocrData.service_name?.value) recognizedFields.push(`服务: ${ocrData.service_name.value}`);
+
+          message.success(`${opts.auto ? '自动' : ''}识别成功！${recognizedFields.join(', ')}`);
+        } else {
+          if (!opts.auto) message.warning('未能识别到发票信息，请手动输入');
+        }
+      } else {
+        console.log('文件缺少temp_id:', firstFile);
+        message.error('文件格式不支持OCR识别');
+--
+    }
+
+    setLoading(true);
+    try {
+      const details = items.map(item => ({
+        id: item.id, // 编辑时可用
+        amount: item.amount,
+        purpose: item.purpose,
+        type: item.type,
+        remark: item.remark,
+        invoice_number: item.invoice_number, // 发票号
+        // 🔧 修复：包含所有发票扩展字段
+        invoice_date: item.invoice_date, // 发票日期
+        buyer_name: item.buyer_name, // 购买方
+        service_name: item.service_name, // 服务名称
+        attachments: item.uploaded || [], // 新增的临时附件
+        existingVouchers: item.existingVouchers || [] // 现有凭证（编辑时保留）
+      }));
+
+      let response;
+      if (isEdit) {
+        response = await api.put(`/api/reimbursement/reimbursement-forms/${id}`,
+          { items: details, status }
+--
+              </Row>
+
+              <Row gutter={16}>
+                {/* 第二行：发票信息 */}
+                <Col span={6}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                      发票号
+                    </label>
+                    <Input
+                      value={item.invoice_number}
+                      onChange={(e) => handleInvoiceNumberChange(item.key, e.target.value)}
+                      placeholder="仅填写后8位数字或字母"
+                      maxLength={100}
+                    />
+                  </div>
+                </Col>
+                <Col span={6}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>发票日期</label>
+                    <Input
+                      value={item.invoice_date}
+                      onChange={(e) => handleItemChange(item.key, 'invoice_date', e.target.value)}
+                      placeholder="发票日期"
+                      maxLength={50}
+                    />
+                  </div>
+                </Col>
+                <Col span={6}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>购买方</label>
+                    <Input
+                      value={item.buyer_name}

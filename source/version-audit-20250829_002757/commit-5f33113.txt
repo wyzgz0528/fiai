@@ -1,0 +1,15 @@
+commit 5f33113cb4a2212e8ac5fb8488c374790c6b11a8
+Author: Production Server <admin@caiwu.local>
+Date:   Thu Aug 28 13:19:16 2025 +0800
+
+    修复：基于被驳回报销单重新创建时，完整复制发票字段和附件
+    
+    - 修复createFormFromRejected函数，现在会复制所有发票扩展字段
+    - 包括invoice_date（发票日期）、buyer_name（购买方）、service_name（服务名称）
+    - 复制原报销单的所有附件到新报销单
+    - 将函数改为异步以支持文件操作
+    - 更新相关路由支持异步调用
+
+backend/src/db.sqlite
+backend/src/routes/forms_detail.js
+backend/src/services/formService.js

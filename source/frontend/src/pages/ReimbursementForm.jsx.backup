@@ -1,0 +1,481 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
+import api from '../utils/api';
+import { 
+  Card, 
+  Form, 
+  Input, 
+  InputNumber, 
+  Select, 
+  Button, 
+  Table, 
+  Upload, 
+  Space, 
+  Typography, 
+  message, 
+  Row, 
+  Col,
+  Statistic,
+  Divider,
+  Tag,
+  Modal
+} from 'antd';
+import { 
+  PlusOutlined, 
+  DeleteOutlined, 
+  InboxOutlined, 
+  SaveOutlined, 
+  SendOutlined, 
+  ArrowLeftOutlined,
+  FileImageOutlined,
+  FilePdfOutlined,
+  UploadOutlined
+} from '@ant-design/icons';
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
+
+// 报销类型可选项
+// 旧的静态选项作为回退
+const fallbackTypeOptions = [
+  { value: '差旅费', label: '差旅费' },
+  { value: '办公用品采购', label: '办公用品采购' },
+  { value: '交通费', label: '交通费' },
+  { value: '其他', label: '其他' },
+];
+
+function ReimbursementForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [form] = Form.useForm();
+  
+  // 明细数据状态
+  const [items, setItems] = useState([
+    { key: Date.now(), amount: '', purpose: '', type: '', remark: '', uploaded: [] }
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [dynamicTypes, setDynamicTypes] = useState(fallbackTypeOptions);
+  const [formStatus, setFormStatus] = useState(''); // 新增：当前报销单状态
+
+  // 计算总金额
+  const totalAmount = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+  useEffect(() => {
+    if (id) {
+      setIsEdit(true);
+      // 新增：加载已有报销单明细
+      (async () => {
+        try {
+          const resp = await api.get(`/api/reimbursement/reimbursement-forms/${id}`);
+          const data = resp.data;
+          setFormStatus(data.status_zh || data.status || '');
+          // 将 records 映射为编辑 items
+            const mapped = (data.records || []).map(r => ({
+              key: `exist-${r.id}`,
+              id: r.id,
+              amount: r.amount,
+              purpose: r.purpose,
+              type: r.type,
+              remark: r.remark,
+              uploaded: [], // 新增附件列表（仅新增的临时附件）
+              existingVoucherCount: r.voucher_count || 0
+            }));
+            if (mapped.length) setItems(mapped);
+        } catch (e) {
+          message.error(e?.response?.data?.msg || '加载报销单失败');
+        }
+      })();
+    }
+  }, [id]);
+
+  // 拉取启用中的报销类型
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const resp = await api.get('/api/reimbursement/expense-types');
+        if (mounted && Array.isArray(resp.data) && resp.data.length) {
+          setDynamicTypes(resp.data.map(r => ({ value: r.name, label: r.name })));
+        }
+      } catch (e) {
+        // 失败保持回退，不打断流程
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // 明细字段变更
+  const handleItemChange = (key, field, value) => {
+    setItems(prev => prev.map(item => 
+      item.key === key ? { ...item, [field]: value } : item
+    ));
+  };
+
+  // 添加明细行
+  const handleAddItem = () => {
+    const newItem = {
+      key: Date.now(),
+      amount: '',
+      purpose: '',
+      type: '',
+      remark: '',
+      uploaded: []
+    };
+    setItems(prev => [...prev, newItem]);
+  };
+
+  // 删除明细行
+  const handleRemoveItem = (key) => {
+    if (items.length === 1) {
+      message.warning('至少保留一条明细记录');
+      return;
+    }
+    setItems(prev => prev.filter(item => item.key !== key));
+  };
+
+  // 文件上传处理
+  const handleFileUpload = async (key, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const response = await api.post('/api/upload/upload-temp', formData, {
+        headers: { 
+          'Content-Type': 'multipart/form-data' 
+        }
+      });
+      
+      const fileInfo = {
+        temp_id: response.data.id,
+        url: `/api/upload/temp-attachments/${response.data.id}`,
+        name: file.name,
+        uid: file.uid
+      };
+
+      setItems(prev => prev.map(item => 
+        item.key === key 
+          ? { ...item, uploaded: [...(item.uploaded || []), fileInfo] }
+          : item
+      ));
+      
+      message.success(`${file.name} 上传成功`);
+      return false; // 阻止默认上传行为
+    } catch (error) {
+      message.error(`${file.name} 上传失败`);
+      return false;
+    }
+  };
+
+  // 删除已上传文件
+  const handleRemoveFile = (itemKey, fileIndex) => {
+    setItems(prev => prev.map(item => 
+      item.key === itemKey 
+        ? { ...item, uploaded: item.uploaded.filter((_, index) => index !== fileIndex) }
+        : item
+    ));
+  };
+
+  // 提交表单
+  const handleSubmit = async (status) => {
+    // 验证明细数据
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.amount || !item.purpose || !item.type) {
+        message.error(`第${i + 1}条明细：金额、用途和类型必填`);
+        return;
+      }
+      if (Number(item.amount) <= 0) {
+        message.error(`第${i + 1}条明细：金额需为正数`);
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      const details = items.map(item => ({
+        id: item.id, // 编辑时可用
+        amount: item.amount,
+        purpose: item.purpose,
+        type: item.type,
+        remark: item.remark,
+        attachments: item.uploaded || [] // 仅包含新增的临时附件
+      }));
+
+      let response;
+      if (isEdit) {
+        response = await api.put(`/api/reimbursement/reimbursement-forms/${id}`,
+          { items: details, status }
+        );
+      } else {
+        response = await api.post('/api/reimbursement/reimbursement-forms/auto-generate',
+          { items: details, status }
+        );
+      }
+
+      const action = status === '草稿' ? '保存' : '提交';
+      message.success(`报销单${action}成功！正在跳转...`);
+      const targetId = isEdit ? id : response.data.formId;
+      setTimeout(() => {
+        navigate(`/reimbursement-forms/${targetId}`);
+      }, 800);
+    } catch (error) {
+      console.error('Submit error:', error);
+      message.error(error.response?.data?.msg || '操作失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 重新提交审批：调用独立提交接口，将草稿或已驳回状态改为待财务审核
+  const handleResubmit = async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const resp = await api.post(`/api/reimbursement/reimbursement-forms/${id}/submit`);
+      message.success('已重新提交审批！');
+      // 更新本地状态，避免再显示按钮
+      setFormStatus(resp.data?.status || '待财务审核');
+      // 可根据需要跳转到详情页；当前保持在编辑页以便查看最新状态
+      // navigate(`/reimbursement-forms/${id}`);
+    } catch (error) {
+      console.error('Resubmit error:', error);
+      message.error(error.response?.data?.msg || '重新提交失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 是否可重新提交
+  const isResubmittable = () => {
+    const s = (formStatus || '').toLowerCase();
+    return ['草稿','已驳回','draft','rejected'].some(k => s.includes(k));
+  };
+
+  // 表格列配置
+  const columns = [
+    {
+      title: '金额 (¥)',
+      dataIndex: 'amount',
+      key: 'amount',
+      width: 150,
+      render: (text, record) => (
+        <InputNumber
+          value={record.amount}
+          onChange={(value) => handleItemChange(record.key, 'amount', value)}
+          min={0.01}
+          step={0.01}
+          precision={2}
+          placeholder="请输入金额"
+          style={{ width: '100%' }}
+        />
+      )
+    },
+    {
+      title: '用途',
+      dataIndex: 'purpose',
+      key: 'purpose',
+      width: 300,
+      render: (text, record) => (
+        <TextArea
+          value={record.purpose}
+          onChange={(e) => handleItemChange(record.key, 'purpose', e.target.value)}
+          placeholder="请输入报销用途"
+          rows={2}
+          maxLength={200}
+          showCount
+        />
+      )
+    },
+    {
+      title: '类型',
+      dataIndex: 'type',
+      key: 'type',
+      width: 150,
+      render: (text, record) => (
+        <Select
+          style={{ width: 140 }}
+          placeholder="类型"
+          value={record.type}
+          onChange={(v) => handleItemChange(record.key, 'type', v)}
+          options={dynamicTypes}
+          showSearch
+          filterOption={(input, option) => (option?.label || '').toLowerCase().includes(input.toLowerCase())}
+        />
+      )
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 200,
+      render: (text, record) => (
+        <Input
+          value={record.remark}
+          onChange={(e) => handleItemChange(record.key, 'remark', e.target.value)}
+          placeholder="备注（可选）"
+          maxLength={100}
+        />
+      )
+    },
+    {
+      title: '报销凭证',
+      dataIndex: 'uploaded',
+      key: 'uploaded',
+      width: 240,
+      render: (uploaded, record) => (
+        <div>
+          {record.existingVoucherCount > 0 && (
+            <div style={{ marginBottom: 4, color: '#555', fontSize: 12 }}>
+              已有关联凭证：{record.existingVoucherCount} 个
+            </div>
+          )}
+          <Upload
+            beforeUpload={(file) => handleFileUpload(record.key, file)}
+            showUploadList={false}
+            accept="image/*,application/pdf,.jpg,.jpeg,.png,.pdf"
+          >
+            <Button icon={<UploadOutlined />} size="small">
+              上传新增凭证
+            </Button>
+          </Upload>
+          {uploaded && uploaded.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              {uploaded.map((file, index) => (
+                <Tag
+                  key={index}
+                  closable
+                  onClose={() => handleRemoveFile(record.key, index)}
+                  style={{ marginBottom: 4 }}
+                >
+                  {file.name}
+                </Tag>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_, record) => (
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => handleRemoveItem(record.key)}
+          disabled={items.length === 1}
+        />
+      )
+    }
+  ];
+
+  return (
+    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+      <Card>
+        {/* 页面标题 */}
+        <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+          <Col>
+            <Title level={3} style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+              {isEdit ? `编辑报销单 #${id}` : '新建报销申请'}
+            </Title>
+            {isEdit && formStatus && <Text type="secondary" style={{ fontSize: 12 }}>当前状态：{formStatus}</Text>}
+          </Col>
+          <Col>
+            <Button 
+              icon={<ArrowLeftOutlined />} 
+              onClick={() => navigate(-1)}
+            >
+              返回
+            </Button>
+          </Col>
+        </Row>
+
+        {/* 报销明细表格 */}
+        <Card 
+          title="报销明细" 
+          extra={
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={handleAddItem}
+            >
+              添加明细
+            </Button>
+          }
+          style={{ marginBottom: 24 }}
+        >
+          <Table
+            columns={columns}
+            dataSource={items}
+            rowKey="key"
+            pagination={false}
+            size="middle"
+            scroll={{ x: 'max-content' }}
+          />
+        </Card>
+
+        {/* 总金额统计 */}
+        <Card style={{ marginBottom: 24 }}>
+          <Row justify="center">
+            <Col>
+              <Statistic
+                title="报销总金额"
+                value={totalAmount}
+                precision={2}
+                prefix="¥"
+                valueStyle={{ color: '#1890ff', fontSize: 24 }}
+              />
+            </Col>
+          </Row>
+        </Card>
+
+        {/* 操作按钮 */}
+        <Row justify="center" gutter={16}>
+          <Col>
+            <Button
+              size="large"
+              icon={<SaveOutlined />}
+              loading={loading}
+              onClick={() => handleSubmit('草稿')}
+              style={{ width: 120 }}
+            >
+              保存草稿
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              size="large"
+              icon={<SendOutlined />}
+              loading={loading}
+              onClick={() => handleSubmit('提交申请')}
+              style={{ width: 120 }}
+            >
+              提交申请
+            </Button>
+          </Col>
+          {isEdit && isResubmittable() && (
+            <Col>
+              <Button
+                type="primary"
+                size="large"
+                loading={loading}
+                onClick={handleResubmit}
+                style={{ width: 120 }}
+              >
+                重新提交
+              </Button>
+            </Col>
+          )}
+        </Row>
+      </Card>
+    </div>
+  );
+}
+
+export default ReimbursementForm;

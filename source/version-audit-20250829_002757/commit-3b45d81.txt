@@ -1,0 +1,16 @@
+commit 3b45d81439178f2ca74b715964fb6ef2d9a325da
+Author: Production Server <admin@caiwu.local>
+Date:   Thu Aug 28 18:09:15 2025 +0800
+
+    重大改进：统一发票字段处理，添加发票金额字段
+    
+    - 统一处理所有5个发票基本字段：发票号、发票金额、发票日期、购买方、服务名称
+    - 不再区分基本字段和扩展字段，所有发票信息都是基本字段
+    - 后端：修复createFormAutoGenerate和updateForm函数的数据库操作
+    - 前端：添加发票金额输入字段和相关处理逻辑
+    - OCR：识别金额时同时更新报销金额和发票金额
+    - 解决保存草稿后发票字段丢失的根本问题
+
+backend/src/db.sqlite
+backend/src/services/formService.js
+frontend/src/pages/ReimbursementForm.jsx

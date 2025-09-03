@@ -1,0 +1,13 @@
+commit 9f1c195099c3c8f51f5140bfec8054f7686b3c57
+Author: Production Server <admin@caiwu.local>
+Date:   Thu Aug 28 14:37:12 2025 +0800
+
+    关键修复：前端提交时包含完整发票字段
+    
+    - 修复ReimbursementForm.jsx中提交数据时缺少发票扩展字段的问题
+    - 添加invoice_date（发票日期）、buyer_name（购买方）、service_name（服务名称）字段
+    - 修复导致首次提交申请后发票字段丢失的根本原因
+    - 重新构建前端以应用修复
+
+backend/src/db.sqlite
+frontend/src/pages/ReimbursementForm.jsx

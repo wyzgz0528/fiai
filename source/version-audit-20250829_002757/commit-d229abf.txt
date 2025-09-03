@@ -1,0 +1,13 @@
+commit d229abf2553192dfbdc27f5ac5a2b96ed335e819
+Author: Production Server <admin@caiwu.local>
+Date:   Thu Aug 28 14:17:35 2025 +0800
+
+    修复：附件复制路径问题
+    
+    - 修复createFormFromRejected函数中附件文件路径构建错误
+    - voucher.file_path已包含vouchers/前缀，不需要重复添加
+    - 添加详细的调试日志跟踪附件复制过程
+    - 修复导致attachments_count为0的问题
+
+backend/src/db.sqlite
+backend/src/services/formService.js

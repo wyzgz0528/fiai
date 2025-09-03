@@ -1,0 +1,13 @@
+commit 21100c32cefa0e1be9399e6f4b2799efcc7e185b
+Author: Production Server <admin@caiwu.local>
+Date:   Thu Aug 28 14:25:40 2025 +0800
+
+    修复：删除凭证时的字段名错误
+    
+    - 修复forms_detail.js中删除凭证关联时的字段名错误
+    - 将record.reimbursement_form_id改为record.form_id
+    - 添加form存在性检查，避免undefined错误
+    - 修复导致删除凭证时500错误的问题
+
+backend/src/db.sqlite
+backend/src/routes/forms_detail.js
